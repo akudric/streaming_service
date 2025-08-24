@@ -15,8 +15,8 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Serve static files from the current directory
-app.use(express.static(__dirname));
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 let currentVideo = null; // Stores the URL to the currently playing video
 let videoState = { playing: false, time: 0 };
