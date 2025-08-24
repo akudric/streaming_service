@@ -15,8 +15,14 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from the public directory with correct MIME types
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, path, stat) => {
+        if (path.endsWith('.js')) {
+            res.set('Content-Type', 'application/javascript');
+        }
+    }
+}));
 
 let currentVideo = null; // Stores the URL to the currently playing video
 let videoState = { playing: false, time: 0 };
@@ -42,7 +48,7 @@ io.on('connection', (socket) => {
 
     socket.on('seek', (time) => {
         videoState.time = time;
-        io.emit('seek', time);
+        io.emit('seek');
     });
 
     socket.on('updateTime', (time) => {
