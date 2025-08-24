@@ -1,33 +1,24 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-const UPLOAD_DIR = 'uploads';
-
-// Set up multer for file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, UPLOAD_DIR);
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
-const upload = multer({ storage: storage });
 
 // Serve static files from the current directory
 app.use(express.static(__dirname));
 
-// Serve uploaded video files
-app.use('/uploads', express.static(path.join(__dirname, UPLOAD_DIR)));
-
-let currentVideo = null; // Stores the path to the currently playing video
+let currentVideo = null; // Stores the URL to the currently playing video
 let videoState = { playing: false, time: 0 };
 
 io.on('connection', (socket) => {
@@ -63,16 +54,37 @@ io.on('connection', (socket) => {
     });
 });
 
-// Handle video upload
-app.post('/upload', upload.single('video'), (req, res) => {
-    if (req.file) {
-        currentVideo = `/uploads/${req.file.filename}`;
-        videoState = { playing: false, time: 0 }; // Reset state for new video
-        io.emit('loadVideo', currentVideo);
-        io.emit('videoState', videoState);
-        res.json({ message: 'Video uploaded and set for streaming!', videoPath: currentVideo });
-    } else {
-        res.status(400).json({ message: 'No video file uploaded.' });
+// Handle video upload to Cloudinary
+app.post('/upload', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
+    try {
+        // Cloudinary expects base64 or a buffer
+        const fileBuffer = req.body;
+
+        if (!fileBuffer || fileBuffer.length === 0) {
+            return res.status(400).json({ message: 'No file data received.' });
+        }
+
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload_stream(
+            { resource_type: 'video' },
+            (error, result) => {
+                if (error) {
+                    console.error('Cloudinary upload error:', error);
+                    return res.status(500).json({ message: 'Cloudinary upload failed.', error: error.message });
+                }
+                if (result) {
+                    currentVideo = result.secure_url; // Use the secure URL from Cloudinary
+                    videoState = { playing: false, time: 0 }; // Reset state for new video
+                    io.emit('loadVideo', currentVideo);
+                    io.emit('videoState', videoState);
+                    res.json({ message: 'Video uploaded to Cloudinary and set for streaming!', videoUrl: currentVideo });
+                }
+            }
+        ).end(fileBuffer);
+
+    } catch (error) {
+        console.error('Server error during upload:', error);
+        res.status(500).json({ message: 'Server error during upload.', error: error.message });
     }
 });
 

@@ -73,22 +73,27 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadButton.addEventListener('click', () => {
         const file = videoUpload.files[0];
         if (file) {
-            const formData = new FormData();
-            formData.append('video', file);
-
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data.message);
-                // Server will emit loadVideo and videoState after successful upload
-            })
-            .catch(error => {
-                console.error('Error uploading video:', error);
-                alert('Error uploading video.');
-            });
+            // Read file as ArrayBuffer to send as raw body
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                fetch('/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': file.type // Important for server to know file type
+                    },
+                    body: e.target.result // Send as raw ArrayBuffer
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                    // Server will emit loadVideo and videoState after successful upload
+                })
+                .catch(error => {
+                    console.error('Error uploading video:', error);
+                    alert('Error uploading video.');
+                });
+            };
+            reader.readAsArrayBuffer(file);
         } else {
             alert('Please select a video file to upload.');
         }
