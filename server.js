@@ -6,7 +6,12 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: "*", // Allow all origins for now, refine later if needed
+        methods: ["GET", "POST"]
+    }
+});
 
 // Configure Cloudinary
 cloudinary.config({
