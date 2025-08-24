@@ -56,23 +56,27 @@ io.on('connection', (socket) => {
 
 // Handle video upload to Cloudinary
 app.post('/upload', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
+    console.log('[/upload] Request received.');
     try {
-        // Cloudinary expects base64 or a buffer
         const fileBuffer = req.body;
 
         if (!fileBuffer || fileBuffer.length === 0) {
+            console.log('[/upload] No file data received.');
             return res.status(400).json({ message: 'No file data received.' });
         }
+
+        console.log(`[/upload] File buffer size: ${fileBuffer.length} bytes`);
 
         // Upload to Cloudinary
         const result = await cloudinary.uploader.upload_stream(
             { resource_type: 'video' },
             (error, result) => {
                 if (error) {
-                    console.error('Cloudinary upload error:', error);
+                    console.error('[/upload] Cloudinary upload error:', error);
                     return res.status(500).json({ message: 'Cloudinary upload failed.', error: error.message });
                 }
                 if (result) {
+                    console.log('[/upload] Cloudinary upload successful. URL:', result.secure_url);
                     currentVideo = result.secure_url; // Use the secure URL from Cloudinary
                     videoState = { playing: false, time: 0 }; // Reset state for new video
                     io.emit('loadVideo', currentVideo);
@@ -83,7 +87,7 @@ app.post('/upload', express.raw({ type: '*/*', limit: '50mb' }), async (req, res
         ).end(fileBuffer);
 
     } catch (error) {
-        console.error('Server error during upload:', error);
+        console.error('[/upload] Server error during upload:', error);
         res.status(500).json({ message: 'Server error during upload.', error: error.message });
     }
 });
