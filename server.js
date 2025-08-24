@@ -18,8 +18,13 @@ cloudinary.config({
 // Serve static files from the public directory with correct MIME types
 app.use(express.static(path.join(__dirname, 'public'), {
     setHeaders: (res, path, stat) => {
+        console.log(`Serving file: ${path}, original MIME: ${res.getHeader('Content-Type')}`);
         if (path.endsWith('.js')) {
-            res.set('Content-Type', 'application/javascript');
+            res.setHeader('Content-Type', 'application/javascript');
+            console.log(`Set Content-Type for .js to application/javascript for: ${path}`);
+        } else if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+            console.log(`Set Content-Type for .css to text/css for: ${path}`);
         }
     }
 }));
