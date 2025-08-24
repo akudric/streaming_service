@@ -7,6 +7,22 @@
   ],
   "routes": [
     {
+      "src": "/socket.io.js",
+      "dest": "socket.io.js"
+    },
+    {
+      "src": "/style.css",
+      "dest": "style.css"
+    },
+    {
+      "src": "/script.js",
+      "dest": "script.js"
+    },
+    {
+      "src": "/",
+      "dest": "index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "server.js"
     }
